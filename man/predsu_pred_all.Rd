@@ -14,8 +14,9 @@ predsu_pred_all(
   v_censor = "Ind_Censor",
   t_ana = 0.75,
   t_enrollment = 1,
-  t_next_analysis = 2,
-  n_to_enroll = 15
+  t_next_ana = 2,
+  n_to_enroll = 15,
+  ...
 )
 }
 \arguments{
@@ -42,11 +43,16 @@ stared)}
 \item{t_enrollment}{Duration of enrollment (starting from 0 when the study
 stared). Bigger than t_ana if need to enroll more patients}
 
-\item{t_next_analysis}{Time for the next analysis (starting from 0 when the
+\item{t_next_ana}{Time for the next analysis (starting from 0 when the
 study stared)}
 
 \item{n_to_enroll}{Number of patients to be enrolled from the time of the
 interim analysis to the time enrollment will finish}
+}
+\value{
+A data frame with the following new columns. Pred_T_Event: predicted
+    event or censoring time; Pred_Ind_Censor: predicted censoring status;
+    Pred_T_Surv: predicted survival time
 }
 \description{
 Predict survival time conditioning on censoring time based on interval

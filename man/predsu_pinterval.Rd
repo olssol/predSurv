@@ -4,7 +4,7 @@
 \alias{predsu_pinterval}
 \title{Get probability for each interval}
 \usage{
-predsu_pinterval(vec_tsurv, vec_tcensor, t_max = 1000)
+predsu_pinterval(vec_tsurv, vec_tcensor, t_max = 10)
 }
 \description{
 Get probability for each interval

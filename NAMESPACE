@@ -2,6 +2,7 @@
 
 export(predsu_pci)
 export(predsu_pinterval)
+export(predsu_plot_pintervals)
 export(predsu_pred)
 export(predsu_pred_all)
 export(predsu_psurv)

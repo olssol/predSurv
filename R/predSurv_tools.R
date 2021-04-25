@@ -31,7 +31,7 @@ predsu_simu <- function(n = 300,
     time_enroll <- runif(n, 0, min(t_ana, t_enrollment))
     y           <- rexp(n, lambda_surv)
     x           <- rexp(n, lambda_censor)
-    censor      <- x < y
+    censor      <- as.integer(x < y)
 
     t_event     <- censor * x + (1 - censor) * y
     t_tmp       <- t_event + time_enroll
@@ -86,7 +86,7 @@ predsu_pci <- function(vec_tcensor, vec_tsurv, option = c("upper", "lower")) {
 #' @export
 #'
 #'
-predsu_pinterval <- function(vec_tsurv, vec_tcensor, t_max = 1000) {
+predsu_pinterval <- function(vec_tsurv, vec_tcensor, t_max = 10) {
 
     n_surv <- length(vec_tsurv)
     n_tot  <- n_surv + length(vec_tcensor)
@@ -198,7 +198,7 @@ predsu_pred <- function(prob_ints, condition_t = 0,
     ## interval
     inx  <- min(which(prob_ints[, "T1"] > condition_t))
     if (inx > 1) {
-        prob_ints <- prob_ints[-(1:(inx-1)), , drop = FALSE]
+        prob_ints <- prob_ints[-(1:(inx - 1)), , drop = FALSE]
     }
 
     ## within interval probability > time
@@ -255,11 +255,14 @@ predsu_pred <- function(prob_ints, condition_t = 0,
 #'     stared)
 #' @param t_enrollment Duration of enrollment (starting from 0 when the study
 #'     stared). Bigger than t_ana if need to enroll more patients
-#' @param t_next_analysis Time for the next analysis (starting from 0 when the
+#' @param t_next_ana Time for the next analysis (starting from 0 when the
 #'     study stared)
 #' @param n_to_enroll Number of patients to be enrolled from the time of the
 #'     interim analysis to the time enrollment will finish
 #'
+#' @return A data frame with the following new columns. Pred_T_Event: predicted
+#'     event or censoring time; Pred_Ind_Censor: predicted censoring status;
+#'     Pred_T_Surv: predicted survival time
 #'
 #' @export
 #'
@@ -273,43 +276,47 @@ predsu_pred_all <- function(dta,
                             v_censor        = "Ind_Censor",
                             t_ana           = 0.75,
                             t_enrollment    = 1,
-                            t_next_analysis = 2,
-                            n_to_enroll     = 15) {
-
+                            t_next_ana      = 2,
+                            n_to_enroll     = 15,
+                            ...) {
 
     ## add column
     dta$Pred_Ind_Censor <- dta[[v_censor]]
     dta$Pred_T_Event    <- dta[[v_event]]
+    dta$Pred_T_Survival <- NA
 
     ## to be predicted
     inx_censored_ana <- which(dta[[v_censor]] == censor_ana)
     inx_all          <- c(inx_censored_ana, rep(Inf, n_to_enroll))
 
+    if (0 == length(inx_all)) {
+        return(dta)
+    }
+
+    ## probabilities of intervals
+    inx_dead         <- which(dta$Pred_Ind_Censor == censor_event)
+    inx_censored     <- which(dta$Pred_Ind_Censor != censor_event)
+    vec_tsurv        <- dta[inx_dead,     "T_Event"]
+    vec_tcensor      <- dta[inx_censored, "T_Event"]
+    prob_ints        <- predsu_pinterval(vec_tsurv, vec_tcensor, ...)
+
     ## predict all
-    while (length(inx_all) > 0) {
-        cur_pt <- sample(1:length(inx_all), 1)
+    for (j in inx_all) {
 
         ## new patient
-        if (Inf == inx_all[cur_pt]) {
+        if (Inf == j) {
             t_enroll <- runif(1, t_ana, t_enrollment)
             t_cond   <- 0
         } else {
-            t_enroll <- dta[inx_all[cur_pt], v_enroll]
-            t_cond   <- dta[inx_all[cur_pt], v_event]
+            t_enroll <- dta[j, v_enroll]
+            t_cond   <- dta[j, v_event]
         }
-
-        ## probability of intervals
-        inx_dead       <- which(dta$Pred_Ind_Censor == censor_event)
-        inx_censored   <- which(dta$Pred_Ind_Censor != censor_event)
-        vec_tsurv      <- dta[inx_dead,     "Pred_T_Event"]
-        vec_tcensor    <- dta[inx_censored, "Pred_T_Event"]
-        prob_ints      <- predsu_pinterval(vec_tsurv, vec_tcensor)
 
         ## predict time and censoring
         pred_surv <- predsu_pred(prob_ints, condition_t = t_cond)
-        if (pred_surv + t_enroll > t_next_analysis) {
+        if (pred_surv + t_enroll > t_next_ana) {
             new_censor <- censor_ana
-            new_event  <- t_next_analysis - t_enroll
+            new_event  <- t_next_ana - t_enroll
         } else if (pred_surv > max(prob_ints[, "T0"])) {
             new_censor <- censor_lfu
             new_event  <- max(prob_ints[, "T0"])
@@ -319,18 +326,17 @@ predsu_pred_all <- function(dta,
         }
 
         ## append patient
-        if (Inf == inx_all[cur_pt]) {
-            dta[nrow(dta) + 1, ] <- NA
-            tmp <- nrow(dta) + 1
+        if (Inf == j) {
+            tmp                <- nrow(dta) + 1
+            dta[tmp, ]         <- NA
             dta[tmp, v_enroll] <- t_enroll
         } else {
-            tmp <- inx_all[cur_pt]
+            tmp <- j
         }
+
         dta[tmp, "Pred_Ind_Censor"] <- new_censor
         dta[tmp, "Pred_T_Event"]    <- new_event
-
-        ## remove cur_pt
-        inx_all <- inx_all[-cur_pt]
+        dta[tmp, "Pred_T_Survival"] <- pred_surv
     }
 
     dta
