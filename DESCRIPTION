@@ -1,0 +1,24 @@
+Package: predSurv
+Title: Predict survival outcomes based on interim data
+Version: 1.0
+Authors@R:
+    person(given = "Chenguang",
+           family = "Wang",
+           role = c("aut", "cre"),
+           email = "cwang68@jhmi.edu")
+Maintainer: Chenguang Wang <cwang68@jhmi.edu>
+Description: Simulate the predictive distribution of survival outcomes based on observed data at an interim analysis
+License: GPL (>=3)
+Depends:
+    methods,
+    R (>= 3.5.0)
+Imports:
+LinkingTo:
+RcppModules:
+Encoding: UTF-8
+LazyData: true
+NeedsCompilation: yes
+SystemRequirements: GNU make
+RoxygenNote: 7.1.1
+Suggests:
+VignetteBuilder: knitr
